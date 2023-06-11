@@ -1,6 +1,15 @@
-import { Box, Button, HStack, Input, Text, VStack } from "@chakra-ui/react";
-import { useSocketContext, useUserContext } from "../contexts";
 import { useRef, useState } from "react";
+import {
+  Box,
+  Button,
+  Divider,
+  HStack,
+  Input,
+  Text,
+  Textarea,
+  VStack,
+} from "@chakra-ui/react";
+import { useSocketContext, useUserContext } from "../contexts";
 
 export function Main() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -19,8 +28,11 @@ export function Main() {
 
   return (
     <VStack>
-      <Text fontWeight="bold">Welcome {username}!</Text>
+      <Text mt={4} fontWeight="bold">
+        Welcome {username}!
+      </Text>
       <Text>Create a room {roomsCount ? "or join to existing one" : ""}</Text>
+      <Divider />
       {roomsCount === 0 && !showCreate && (
         <Button onClick={() => setShowCreate(true)} variant="outline">
           Create
@@ -38,7 +50,9 @@ export function Main() {
               >
                 Cancel
               </Button>
-              <Button onClick={onCreate}>Create</Button>
+              <Button onClick={onCreate} variant="outline">
+                Create
+              </Button>
             </HStack>
           </VStack>
         ) : (
@@ -87,14 +101,64 @@ function RoomsView({ onShowCreate }: RoomsViewProps) {
 }
 
 function MessagesView() {
-  const { rooms, selectedRoomId } = useSocketContext();
+  const [message, setMessage] = useState("");
+  const { username } = useUserContext();
+  const { rooms, selectedRoomId, messages, onSendMessage } = useSocketContext();
   if (!selectedRoomId) return null;
   const roomName = rooms[selectedRoomId]?.name ?? "";
   if (!roomName) return null;
 
   return (
-    <VStack mt="5">
-      <Text>There is no message for room {roomName}</Text>
+    <VStack mt="5" w="100vw">
+      <Divider />
+      {messages.length === 0 && (
+        <Text>There is no message for room {roomName}</Text>
+      )}
+
+      {messages.length > 0 && (
+        <VStack spacing={4} w="70vw">
+          <Text fontWeight="semibold">Messages</Text>
+          {messages.map((m, index) => (
+            <Box
+              key={index}
+              border="1px"
+              borderColor="gray.400"
+              borderRadius="md"
+              padding={2}
+              w="30vw"
+            >
+              <Text
+                color="gray.600"
+                textAlign={m.username === username ? "right" : "left"}
+              >
+                {m.username === username ? "You" : m.username} - {m.time}
+              </Text>
+              <Text>{m.message}</Text>
+            </Box>
+          ))}
+        </VStack>
+      )}
+
+      <Box position="sticky" bottom={0} bg="white">
+        <HStack mb={4}>
+          <Textarea
+            value={message}
+            onChange={({ currentTarget }) => setMessage(currentTarget.value)}
+            placeholder="Type your message"
+            w="50vw"
+          />
+          <Button
+            onClick={() => {
+              onSendMessage(message);
+              setMessage("");
+            }}
+            disabled={!message}
+            variant="outline"
+          >
+            Send
+          </Button>
+        </HStack>
+      </Box>
     </VStack>
   );
 }
