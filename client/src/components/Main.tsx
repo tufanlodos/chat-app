@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   Divider,
+  Flex,
   HStack,
   Input,
   Text,
@@ -12,55 +13,68 @@ import {
 import { useSocketContext, useUserContext } from "../contexts";
 
 export function Main() {
-  const inputRef = useRef<HTMLInputElement>(null);
   const [showCreate, setShowCreate] = useState(false);
   const { username } = useUserContext();
-  const { rooms, onCreateRoom } = useSocketContext();
+  const { rooms } = useSocketContext();
   const roomsCount = Object.keys(rooms).length;
+
+  const onShowCreate = () => setShowCreate(true);
+  const onHideCreate = () => setShowCreate(false);
+
+  return (
+    <VStack h="100vh">
+      <Text mt={4} fontWeight="bold">
+        Welcome {username}!
+      </Text>
+      <Text>Create a room {roomsCount ? "or join to existing one" : ""}</Text>
+      {roomsCount === 0 && !showCreate && (
+        <Button onClick={onShowCreate} variant="outline">
+          Create
+        </Button>
+      )}
+      <Divider />
+
+      <Box mt="5">
+        {showCreate ? (
+          <CreateRoomView onHideCreate={onHideCreate} />
+        ) : (
+          <RoomsView onShowCreate={onShowCreate} />
+        )}
+      </Box>
+
+      {!showCreate && <MessagesView />}
+    </VStack>
+  );
+}
+
+type CreateRoomViewProps = {
+  onHideCreate: () => void;
+};
+
+function CreateRoomView({ onHideCreate }: CreateRoomViewProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { onCreateRoom } = useSocketContext();
 
   const onCreate = () => {
     const roomName = inputRef.current?.value;
     if (!roomName?.trim()) return;
     onCreateRoom(roomName);
     inputRef.current!.value = "";
-    setShowCreate(false);
+    onHideCreate();
   };
 
   return (
     <VStack>
-      <Text mt={4} fontWeight="bold">
-        Welcome {username}!
-      </Text>
-      <Text>Create a room {roomsCount ? "or join to existing one" : ""}</Text>
-      <Divider />
-      {roomsCount === 0 && !showCreate && (
-        <Button onClick={() => setShowCreate(true)} variant="outline">
+      <Text fontWeight="semibold">Create a room</Text>
+      <Input ref={inputRef} placeholder="Room name" size="md" />
+      <HStack>
+        <Button onClick={onHideCreate} variant="outline" color="red">
+          Cancel
+        </Button>
+        <Button onClick={onCreate} variant="outline">
           Create
         </Button>
-      )}
-      <Box mt="5">
-        {showCreate ? (
-          <VStack>
-            <Input ref={inputRef} placeholder="Room name" size="md" />
-            <HStack>
-              <Button
-                onClick={() => setShowCreate(false)}
-                variant="outline"
-                color="red"
-              >
-                Cancel
-              </Button>
-              <Button onClick={onCreate} variant="outline">
-                Create
-              </Button>
-            </HStack>
-          </VStack>
-        ) : (
-          <RoomsView onShowCreate={() => setShowCreate(true)} />
-        )}
-      </Box>
-
-      {!showCreate && <MessagesView />}
+      </HStack>
     </VStack>
   );
 }
@@ -82,7 +96,7 @@ function RoomsView({ onShowCreate }: RoomsViewProps) {
           Object.entries(rooms).map(([id, room]) => (
             <Button
               key={id}
-              disabled={selectedRoomId === id}
+              isDisabled={selectedRoomId === id}
               variant={selectedRoomId === id ? "solid" : "outline"}
               onClick={() => onJoinRoom(id)}
             >
@@ -109,28 +123,34 @@ function MessagesView() {
   if (!roomName) return null;
 
   return (
-    <VStack mt="5" w="100vw">
+    <Flex flexDirection="column" mt="5" h="full">
       <Divider />
       {messages.length === 0 && (
-        <Text>There is no message for room {roomName}</Text>
+        <VStack w="70vw" h="full" spacing={4} mb={4}>
+          <Text textAlign="center" my={2}>
+            There is no message for room <Text as="b">{roomName}</Text>. Start a
+            conversation!
+          </Text>
+        </VStack>
       )}
 
       {messages.length > 0 && (
-        <VStack spacing={4} w="70vw">
-          <Text fontWeight="semibold">Messages</Text>
+        <VStack w="70vw" h="full" spacing={4} mb={4}>
+          <Text fontWeight="semibold" mt={2}>
+            Messages
+          </Text>
           {messages.map((m, index) => (
             <Box
               key={index}
               border="1px"
-              borderColor="gray.400"
+              borderColor="gray.100"
               borderRadius="md"
               padding={2}
-              w="30vw"
+              minW="25vw"
+              alignSelf={m.username === username ? "flex-end" : "flex-start"}
+              textAlign={m.username === username ? "right" : "left"}
             >
-              <Text
-                color="gray.600"
-                textAlign={m.username === username ? "right" : "left"}
-              >
+              <Text color="gray.600">
                 {m.username === username ? "You" : m.username} - {m.time}
               </Text>
               <Text>{m.message}</Text>
@@ -145,20 +165,20 @@ function MessagesView() {
             value={message}
             onChange={({ currentTarget }) => setMessage(currentTarget.value)}
             placeholder="Type your message"
-            w="50vw"
+            w="60vw"
           />
           <Button
             onClick={() => {
               onSendMessage(message);
               setMessage("");
             }}
-            disabled={!message}
+            isDisabled={message === ""}
             variant="outline"
           >
             Send
           </Button>
         </HStack>
       </Box>
-    </VStack>
+    </Flex>
   );
 }

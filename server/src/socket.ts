@@ -17,13 +17,14 @@ export default function socket({ io }: { io: Server }) {
   io.on(EVENTS.CONNECTION, (socket: Socket) => {
     console.log(`User connected ${socket.id}`);
 
+    // broadcast to all connected clients from the server
     io.emit(EVENTS.ROOMS, rooms);
 
     socket.on(EVENTS.CREATE_ROOM, (roomName: string) => {
       const roomId = nanoid();
       rooms[roomId] = { name: roomName };
 
-      // broadcast to all sockets including the one that initiated the event:
+      // broadcast to all connected clients from the server
       io.emit(EVENTS.ROOMS, rooms);
       // join the room:
       socket.join(roomId);
